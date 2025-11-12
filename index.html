@@ -2190,6 +2190,156 @@ document.addEventListener('keydown', (e) => {
     console.log('%c🔒 Secured by Akashdeep Singh', 'color: #00d4ff; font-size: 20px; font-weight: bold;');
     console.log('%cCybersecurity Student | Ethical Hacker', 'color: #bf5af2; font-size: 14px;');
     console.log('%cNational Top-10 🏆 State Gold Medalist 🥇', 'color: #30d158; font-size: 12px;');
+    <!-- Anti-inspection script — paste before </body> -->
+(function () {
+  'use strict';
+
+  // ====== Config ======
+  // action when DevTools is detected: "overlay", "redirect", or "console"
+  const ON_DETECT = 'overlay'; 
+  const REDIRECT_URL = 'about:blank'; // used if ON_DETECT === 'redirect'
+  const overlayMessage = 'Inspection / DevTools detected. This page is protected.';
+
+  // ====== Prevent right-click / selection / copy (optional) ======
+  document.addEventListener('contextmenu', function (e) { e.preventDefault(); }, false);
+  // optional: disable text selection & dragging (affects UX & accessibility)
+  document.addEventListener('selectstart', function (e) { e.preventDefault(); }, false);
+  document.addEventListener('dragstart', function (e) { e.preventDefault(); }, false);
+
+  // ====== Block common key combos used for "View Source" / DevTools ======
+  document.addEventListener('keydown', function (e) {
+    // F12
+    if (e.key === 'F12' || e.keyCode === 123) {
+      e.preventDefault();
+      e.stopPropagation();
+      return false;
+    }
+
+    // Ctrl/Meta + U (view-source)
+    if ((e.ctrlKey || e.metaKey) && (e.key === 'u' || e.key === 'U')) {
+      e.preventDefault();
+      return false;
+    }
+
+    // Ctrl/Meta + S (save page)
+    if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'S')) {
+      e.preventDefault();
+      return false;
+    }
+
+    // Ctrl+Shift+I/J/C (DevTools), Ctrl+Shift+K (Firefox)
+    if (e.ctrlKey && e.shiftKey) {
+      const k = e.key.toLowerCase();
+      if (k === 'i' || k === 'j' || k === 'c' || k === 'k') {
+        e.preventDefault();
+        return false;
+      }
+    }
+
+    // Ctrl+Shift+P (some browsers) - optional
+    if (e.ctrlKey && e.shiftKey && (e.key === 'P' || e.key === 'p')) {
+      e.preventDefault();
+      return false;
+    }
+  }, true);
+
+  // ====== Heuristic DevTools detection ======
+  // Note: heuristics can false-positive. They try to detect when DevTools is open by measuring viewport differences
+  let devtoolsOpen = false;
+  const detectInterval = 800; // ms
+  const threshold = 160; // px of outer - inner size (adjust if false positives occur)
+
+  function handleDevtoolsOpen() {
+    if (devtoolsOpen) return;
+    devtoolsOpen = true;
+
+    // action: overlay, redirect, or console-only
+    if (ON_DETECT === 'overlay') {
+      const overlay = document.createElement('div');
+      overlay.id = 'devtools-protect-overlay';
+      Object.assign(overlay.style, {
+        position: 'fixed',
+        inset: '0',
+        background: 'rgba(0,0,0,0.95)',
+        color: 'white',
+        display: 'flex',
+        'align-items': 'center',
+        'justify-content': 'center',
+        'z-index': 2147483647,
+        'font-size': '18px',
+        'text-align': 'center',
+        padding: '20px',
+        'line-height': '1.4',
+      });
+      overlay.innerText = overlayMessage;
+      document.documentElement.appendChild(overlay);
+    } else if (ON_DETECT === 'redirect') {
+      window.location.href = REDIRECT_URL;
+    } else {
+      // console fallback
+      console.warn('DevTools detected');
+    }
+  }
+
+  function handleDevtoolsClose() {
+    if (!devtoolsOpen) return;
+    devtoolsOpen = false;
+    const overlay = document.getElementById('devtools-protect-overlay');
+    if (overlay) overlay.remove();
+  }
+
+  setInterval(function () {
+    try {
+      // If outer-inner width/height difference is large, DevTools likely opened
+      const widthDiff = window.outerWidth - window.innerWidth;
+      const heightDiff = window.outerHeight - window.innerHeight;
+      if (widthDiff > threshold || heightDiff > threshold) {
+        handleDevtoolsOpen();
+      } else {
+        handleDevtoolsClose();
+      }
+    } catch (err) {
+      // ignore
+    }
+  }, detectInterval);
+
+  // Extra detection: check for open console by measuring a toString getter (works in some browsers)
+  (function () {
+    const element = new Image();
+    let opened = false;
+    Object.defineProperty(element, 'id', {
+      get: function () {
+        opened = true;
+        handleDevtoolsOpen();
+        // throw to stop console printing
+        throw new Error('devtools-probe');
+      }
+    });
+    setInterval(function () {
+      opened = false;
+      console.log(element);
+      // if getter ran, console was opened in a way that prints object properties
+      if (opened) {
+        handleDevtoolsOpen();
+      }
+    }, 3000);
+  }());
+
+  // Prevent inline context menu triggered by keyboard (Shift+F10)
+  document.addEventListener('keyup', function (e) {
+    if (e.key === 'ContextMenu' || e.keyCode === 93) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  }, true);
+
+  // Optional: remove "view-source:" attempts (cannot fully block)
+  // Note: user can still use browser menus or developer tools externally.
+
+})();
+
+
   </script>
 </body>
+
 </html>
